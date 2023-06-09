@@ -9,22 +9,21 @@ Public Sub TableOfContents()
 
   Const sSOURCE As String = "TableOfContents"
   On Error GoTo ErrorHandler
-   
-  With Application.ActiveWindow
-    If .View.Type <> ppViewNormal Then
-      MsgBox "No slide is active: please go to ""Normal View"" and select a slide.", vbExclamation, "Table of Contents"
-      Exit Sub
-    End If
-  End With
+     
+  Dim stErrorMessage As String
   
-  Dim slSlide As Slide
-  Set slSlide = Application.ActiveWindow.View.Slide
+  Dim slActiveSlide As Slide
+  Set slActiveSlide = SelectedSlide(stErrorMessage)
+  
+  If stErrorMessage <> vbNullString Then
+    MsgBox stErrorMessage, vbExclamation, "Table of Contents"
+    Exit Sub
+  End If
   
   Dim mydcContents As CMyDictionary
-  Set mydcContents = TitlesAndSlideNumbers()
+  Set mydcContents = TitlesAndSlideNumbers(slActiveSlide)
   
-  PlaceTOC slSlide, mydcContents
-  
+  PlaceTOC slActiveSlide, mydcContents
   
 ErrorExit:
   Exit Sub
@@ -38,6 +37,46 @@ ErrorHandler:
   End If
 
 End Sub
+
+Private Function SelectedSlide(ByRef stErrorMessage As String) As Slide
+
+  Const sSOURCE As String = "SelectedSlide"
+  On Error GoTo ErrorHandler
+   
+   With Application.ActiveWindow
+    If .View.Type <> ppViewNormal Then
+      stErrorMessage = _
+        "No slide is active: please go to ""Normal View"" and select a slide."
+      Exit Function
+    End If
+  End With
+  
+  On Error GoTo NoSlideError
+  
+  Set SelectedSlide = Application.ActiveWindow.View.Slide
+  
+  On Error GoTo ErrorHandler
+  
+  Exit Function
+  
+NoSlideError:
+
+  stErrorMessage = _
+    "No slide is active. Please select a slide where you would like the " & _
+    "table of contents to appear, or where you would like to update an " & _
+    "existing table of contents."
+        
+  Exit Function
+    
+ErrorHandler:
+  ' Run simple clean-up code here
+  If bCentralErrorHandler(msMODULE, sSOURCE) Then
+    Stop
+    Resume
+  End If
+
+End Function
+
 
 ' Entry point
 Public Sub Help()
@@ -60,7 +99,7 @@ ErrorHandler:
 
 End Sub
 
-Public Function TitlesAndSlideNumbers() As CMyDictionary
+Public Function TitlesAndSlideNumbers(ByRef slActiveSlide As Slide) As CMyDictionary
 
   Const sSOURCE As String = "TitlesAndSlideNumbers"
   On Error GoTo ErrorHandler
@@ -69,16 +108,13 @@ Public Function TitlesAndSlideNumbers() As CMyDictionary
   Dim stTitle As String
   Dim stPreviousTitle As String
   
-  Dim sldActiveSlide As Slide
-  Set sldActiveSlide = Application.ActiveWindow.View.Slide
-  
   Dim slSlide As Slide
   
   Dim mydcContents As CMyDictionary
   Set mydcContents = Factory.CreateCMyDictionary
   
   With Application.ActivePresentation
-    For i = sldActiveSlide.SlideIndex + 1 To .Slides.Count
+    For i = slActiveSlide.SlideIndex + 1 To .Slides.Count
       Set slSlide = .Slides(i)
       With .Slides(i).Shapes
       If .HasTitle Then
